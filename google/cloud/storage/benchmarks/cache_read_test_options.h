@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_TEST_OPTIONS_H
-#define GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_TEST_OPTIONS_H
+#ifndef GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_READ_TEST_OPTIONS_H
+#define GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_READ_TEST_OPTIONS_H
 
 #include "google/cloud/storage/benchmarks/benchmark_utils.h"
 #include <cstdint>
@@ -24,7 +24,7 @@ namespace google {
 namespace cloud {
 namespace storage_benchmarks {
 
-struct CacheDatasetOptions {
+struct CacheReadTestOptions {
   std::string labels;
   std::string bucket_name;
   std::string object_prefix;
@@ -39,32 +39,12 @@ struct CacheDatasetOptions {
   bool exit_after_parse = false;
 };
 
-struct CacheTestOptions {
-  std::string labels;
-  std::string bucket_name;
-  std::string object_prefix;
-  int thread_count = 1;
-  int iteration_count = 1;
-  int repeats_per_iteration = 1;
-  std::int64_t read_size = 0;  // 0 means "read the whole file"
-  std::size_t read_buffer_size = 4 * kMiB;
-  std::string api;
-  bool client_per_thread = false;
-  Options client_options;
-  bool exit_after_parse = false;
-};
-
-google::cloud::StatusOr<CacheDatasetOptions>
-ParseCacheDatasetOptions(std::vector<std::string> const& argv,
-                                        std::string const& description);
-
-
-google::cloud::StatusOr<CacheTestOptions>
-ParseCacheTestOptions(std::vector<std::string> const& argv,
+google::cloud::StatusOr<CacheReadTestOptions>
+ParseCacheReadTestOptions(std::vector<std::string> const& argv,
                                         std::string const& description);
 
 }  // namespace storage_benchmarks
 }  // namespace cloud
 }  // namespace google
 
-#endif  // GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_TEST_OPTIONS_H
+#endif  // GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_READ_TEST_OPTIONS_H

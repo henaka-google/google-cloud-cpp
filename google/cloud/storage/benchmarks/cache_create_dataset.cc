@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/storage/benchmarks/aggregate_upload_throughput_options.h"
-#include "google/cloud/storage/benchmarks/cache_test_options.h"
+#include "google/cloud/storage/benchmarks/cache_create_dataset_options.h"
 #include "google/cloud/storage/benchmarks/benchmark_utils.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/grpc_plugin.h"
@@ -33,7 +32,7 @@ using ::google::cloud::testing_util::FormatSize;
 using ::google::cloud::testing_util::Timer;
 namespace gcs = ::google::cloud::storage;
 namespace gcs_bm = ::google::cloud::storage_benchmarks;
-using gcs_bm::AggregateUploadThroughputOptions;
+using gcs_bm::CacheCreateDatasetOptions;
 using gcs_bm::FormatBandwidthGbPerSecond;
 using gcs_bm::FormatTimestamp;
 
@@ -59,7 +58,7 @@ block is configurable in the command-line. We recommend using multiples of
 256KiB for this block size.
 )""";
 
-google::cloud::StatusOr<AggregateUploadThroughputOptions> ParseArgs(
+google::cloud::StatusOr<CacheCreateDatasetOptions> ParseArgs(
     int argc, char* argv[]);
 
 struct TaskConfig {
@@ -93,7 +92,7 @@ struct TaskResult {
 
 class UploadIteration {
  public:
-  UploadIteration(int iteration, AggregateUploadThroughputOptions options,
+  UploadIteration(int iteration, CacheCreateDatasetOptions options,
                   std::vector<UploadItem> upload_items)
       : iteration_(iteration),
         options_(std::move(options)),
@@ -105,11 +104,11 @@ class UploadIteration {
  private:
   std::mutex mu_;
   int const iteration_;
-  AggregateUploadThroughputOptions const options_;
+  CacheCreateDatasetOptions const options_;
   std::vector<UploadItem> remaining_work_;
 };
 
-gcs::Client MakeClient(AggregateUploadThroughputOptions const& options) {
+gcs::Client MakeClient(CacheCreateDatasetOptions const& options) {
   auto opts = google::cloud::Options{options.client_options}
                   // Make the upload buffer size small, the library will flush
                   // on almost all `.write()` requests.
@@ -161,7 +160,7 @@ int main(int argc, char* argv[]) {
   gcs_bm::PrintOptions(std::cout, "Client Options", options->client_options);
   std::cout << "\n# Build Info: " << notes << std::endl;
 
-  auto configs = [](AggregateUploadThroughputOptions const& options,
+  auto configs = [](CacheCreateDatasetOptions const& options,
                     gcs::Client const& default_client) {
     std::vector<TaskConfig> config(options.thread_count,
                                    TaskConfig{default_client});
@@ -304,7 +303,7 @@ std::string ExtractUploadId(std::string v) {
 }
 
 UploadDetail UploadOneObject(gcs::Client& client,
-                             AggregateUploadThroughputOptions const& options,
+                             CacheCreateDatasetOptions const& options,
                              UploadItem const& upload,
                              std::string const& write_block, int iteration) {
   using clock = std::chrono::steady_clock;
@@ -363,7 +362,7 @@ TaskResult UploadIteration::UploadTask(TaskConfig const& config,
 
 using ::google::cloud::internal::GetEnv;
 
-google::cloud::StatusOr<AggregateUploadThroughputOptions> SelfTest(
+google::cloud::StatusOr<CacheCreateDatasetOptions> SelfTest(
     char const* argv0) {
   using ::google::cloud::internal::Sample;
 
@@ -381,7 +380,7 @@ google::cloud::StatusOr<AggregateUploadThroughputOptions> SelfTest(
   (void)client.InsertObject(bucket_name,
                             "aggregate-throughput-benchmark/32KiB.bin",
                             std::string(32 * gcs_bm::kKiB, 'A'));
-  return gcs_bm::ParseAggregateUploadThroughputOptions(
+  return gcs_bm::ParseCacheCreateDatasetOptions(
       {
           argv0,
           "--bucket-name=" + bucket_name,
@@ -396,13 +395,13 @@ google::cloud::StatusOr<AggregateUploadThroughputOptions> SelfTest(
       kDescription);
 }
 
-google::cloud::StatusOr<AggregateUploadThroughputOptions> ParseArgs(
+google::cloud::StatusOr<CacheCreateDatasetOptions> ParseArgs(
     int argc, char* argv[]) {
   auto const auto_run =
       GetEnv("GOOGLE_CLOUD_CPP_AUTO_RUN_EXAMPLES").value_or("") == "yes";
   if (auto_run) return SelfTest(argv[0]);
 
-  auto options = gcs_bm::ParseAggregateUploadThroughputOptions(
+  auto options = gcs_bm::ParseCacheCreateDatasetOptions(
       {argv, argv + argc}, kDescription);
   if (!options) return options;
   // We don't want to get the default labels in the unit tests, as they can
