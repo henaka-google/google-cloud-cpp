@@ -248,6 +248,8 @@ google::cloud::StatusOr<ThroughputOptions> ParseThroughputOptions(
        [&options](std::string const& val) { options.region = val; }},
       {"--bucket-prefix", "use this prefix when creating the bucket",
        [&options](std::string const& val) { options.bucket_prefix = val; }},
+      {"--unique-bucket", "whether or not to create a new bucket each run",
+       [&options](bool& val) { options.unique_bucket = val; }},
       {"--thread-count", "set the number of threads in the benchmark",
        [&options](std::string const& val) {
          options.thread_count = std::stoi(val);

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/storage/benchmarks/aggregate_download_throughput_options.h"
 #include "google/cloud/storage/benchmarks/cache_test_options.h"
 #include "google/cloud/grpc_options.h"
 #include "google/cloud/internal/absl_str_join_quiet.h"
@@ -27,8 +26,8 @@ namespace gcs = ::google::cloud::storage;
 namespace gcs_ex = ::google::cloud::storage_experimental;
 using ::google::cloud::testing_util::OptionDescriptor;
 
-StatusOr<AggregateDownloadThroughputOptions> ValidateOptions(
-    std::string const& usage, AggregateDownloadThroughputOptions options) {
+StatusOr<CacheDatasetOptions> ValidateOptions(
+    std::string const& usage, CacheDatasetOptions options) {
   auto make_status = [](std::ostringstream& os) {
     return Status{StatusCode::kInvalidArgument, std::move(os).str()};
   };
@@ -68,10 +67,10 @@ StatusOr<AggregateDownloadThroughputOptions> ValidateOptions(
   return options;
 }
 
-google::cloud::StatusOr<AggregateDownloadThroughputOptions>
-ParseAggregateDownloadThroughputOptions(std::vector<std::string> const& argv,
+google::cloud::StatusOr<CacheDatasetOptions>
+ParseCacheDatasetOptionsOptions(std::vector<std::string> const& argv,
                                         std::string const& description) {
-  AggregateDownloadThroughputOptions options;
+  CacheDatasetOptions options;
   bool wants_help = false;
   bool wants_description = false;
 
