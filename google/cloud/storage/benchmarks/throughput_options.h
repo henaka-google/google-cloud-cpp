@@ -30,8 +30,6 @@ struct ThroughputOptions {
   std::string labels;
   std::string region;
   std::string bucket_prefix = "gcs-grpc-team-cloud-cpp-testing-bm";
-  // whether to create a new bucket and delete it or not
-  bool unique_bucket = false;
   std::chrono::seconds duration =
       std::chrono::seconds(std::chrono::minutes(15));
   int thread_count = 1;

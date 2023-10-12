@@ -134,8 +134,8 @@ int main(int argc, char* argv[]) {
   auto client = gcs::Client(client_options);
 
   auto generator = google::cloud::internal::DefaultPRNG(std::random_device{}());
-  auto bucket_name =
-      gcs::testing::MakeRandomBucketName(generator, options->bucket_prefix);
+  auto bucket_name = options->bucket_prefix;
+  //    gcs::testing::MakeRandomBucketName(generator, options->bucket_prefix);
   std::string notes = google::cloud::storage::version_string() + ";" +
                       google::cloud::internal::compiler() + ";" +
                       google::cloud::internal::compiler_flags();
@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
   // Make the output generated so far immediately visible, helps with debugging.
   std::cout << std::flush;
 
-  auto meta =
+  /*auto meta =
       client.CreateBucket(bucket_name,
                           gcs::BucketMetadata()
                               .set_storage_class(gcs::storage_class::Standard())
@@ -235,7 +235,7 @@ int main(int argc, char* argv[]) {
   if (!meta) {
     std::cerr << "Error creating bucket: " << meta.status() << "\n";
     return 1;
-  }
+  }*/
 
   // Serialize output to `std::cout`.
   std::mutex mu;
@@ -257,12 +257,12 @@ int main(int argc, char* argv[]) {
   }
   for (auto& f : tasks) f.get();
 
-  gcs_bm::DeleteAllObjects(client, bucket_name, options->thread_count);
+  /*gcs_bm::DeleteAllObjects(client, bucket_name, options->thread_count);
   auto status = client.DeleteBucket(bucket_name);
   if (!status.ok()) {
     std::cerr << "# Error deleting bucket, status=" << status << "\n";
     return 1;
-  }
+  }*/
   std::cout << "# DONE\n" << std::flush;
 
   return 0;

@@ -39,8 +39,28 @@ struct CacheDatasetOptions {
   bool exit_after_parse = false;
 };
 
+struct CacheTestOptions {
+  std::string labels;
+  std::string bucket_name;
+  std::string object_prefix;
+  int thread_count = 1;
+  int iteration_count = 1;
+  int repeats_per_iteration = 1;
+  std::int64_t read_size = 0;  // 0 means "read the whole file"
+  std::size_t read_buffer_size = 4 * kMiB;
+  std::string api;
+  bool client_per_thread = false;
+  Options client_options;
+  bool exit_after_parse = false;
+};
+
 google::cloud::StatusOr<CacheDatasetOptions>
-ParseCacheDatasetOptionsOptions(std::vector<std::string> const& argv,
+ParseCacheDatasetOptions(std::vector<std::string> const& argv,
+                                        std::string const& description);
+
+
+google::cloud::StatusOr<CacheTestOptions>
+ParseCacheTestOptions(std::vector<std::string> const& argv,
                                         std::string const& description);
 
 }  // namespace storage_benchmarks
