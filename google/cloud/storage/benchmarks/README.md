@@ -1,5 +1,7 @@
 # Google Cloud Storage C++ Client Library Benchmarks
 
+Note: henaka's updates for running cache-related tests
+
 This directory contains benchmarks for the GCS C++ client library. The objective
 is not to benchmark GCS, but to verify that (a) the library *can* reach the
 expected performance for a single GCS client, and (b) that the library does not
