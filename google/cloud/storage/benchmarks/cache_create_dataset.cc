@@ -38,8 +38,10 @@ using gcs_bm::FormatTimestamp;
 
 char const kDescription[] = R"""(A benchmark for aggregated upload throughput.
 
-This benchmark repeatedly uploads a dataset to GCS, and reports the time taken
+This benchmark uploads a dataset to GCS, and reports the time taken
 to upload each object, as well as the time taken to upload the dataset.
+
+Objects will be named by increasing numbers, for easier use in reading.
 
 The benchmark uses multiple threads to upload the dataset, expecting higher
 throughput as threads are added. The benchmark runs multiple iterations of the
@@ -175,7 +177,7 @@ int main(int argc, char* argv[]) {
     auto const object_size = std::uniform_int_distribution<std::uint64_t>(
         options->minimum_object_size, options->maximum_object_size)(generator);
     return UploadItem{
-        options->object_prefix + gcs_bm::MakeRandomObjectName(generator),
+        options->object_prefix,// + gcs_bm::MakeRandomObjectName(generator),
         object_size};
   });
   auto const write_block = [&] {
@@ -302,6 +304,11 @@ std::string ExtractUploadId(std::string v) {
   return v.substr(pos + std::strlen(kRestField));
 }
 
+std::string NextName() {
+    static int i;
+    return std::to_string(i++);
+}
+
 UploadDetail UploadOneObject(gcs::Client& client,
                              CacheCreateDatasetOptions const& options,
                              UploadItem const& upload,
@@ -314,7 +321,8 @@ UploadDetail UploadOneObject(gcs::Client& client,
   auto const object_start = clock::now();
   auto const start = std::chrono::system_clock::now();
 
-  auto stream = client.WriteObject(options.bucket_name, upload.object_name);
+  // Ensure that every upload creates a new object
+  auto stream = client.WriteObject(options.bucket_name, upload.object_name + "/" + NextName());
   auto object_bytes = std::uint64_t{0};
   while (object_bytes < upload.object_size) {
     auto n = std::min(static_cast<std::uint64_t>(buffer_size),
