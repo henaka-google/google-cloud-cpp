@@ -27,6 +27,9 @@
 #include "absl/strings/str_format.h"
 #include "absl/time/time.h"
 
+#include <sstream>
+#include <iomanip>
+
 namespace {
 using ::google::cloud::testing_util::FormatSize;
 using ::google::cloud::testing_util::Timer;
@@ -305,8 +308,10 @@ std::string ExtractUploadId(std::string v) {
 }
 
 std::string NextName() {
-    static int i;
-    return std::to_string(i++);
+  static int i;
+  std::stringstream ss;
+  ss << std::setw(10) << std::setfill('0') << i++;
+  return ss.str();
 }
 
 UploadDetail UploadOneObject(gcs::Client& client,

@@ -28,6 +28,7 @@ struct CacheReadTestOptions {
   std::string labels;
   std::string bucket_name;
   std::string object_prefix;
+  int object_count = 1;
   int thread_count = 1;
   int iteration_count = 1;
   int repeats_per_iteration = 1;
