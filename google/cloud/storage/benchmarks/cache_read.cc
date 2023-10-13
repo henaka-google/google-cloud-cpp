@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/storage/benchmarks/cache_read_test_options.h"
+#include "google/cloud/storage/benchmarks/cache_test_options.h"
 #include "google/cloud/storage/benchmarks/benchmark_utils.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/grpc_plugin.h"
@@ -25,6 +26,7 @@
 #include "google/cloud/testing_util/command_line_parsing.h"
 #include "google/cloud/testing_util/timer.h"
 #include "absl/time/time.h"
+#include "cache_test_options.h"
 #include <algorithm>
 #include <atomic>
 #include <future>
@@ -102,10 +104,16 @@ struct TaskResult {
   Counters counters;
 };
 
+struct ObjectToRead {
+  std::string bucket;
+  std::string name;
+  std::int64_t size;
+};
+
 class Iteration {
  public:
   Iteration(int iteration, CacheReadTestOptions options,
-            std::vector<gcs::ObjectMetadata> objects)
+            std::vector<ObjectToRead> objects)
       : iteration_(iteration),
         options_(std::move(options)),
         remaining_objects_(std::move(objects)) {}
@@ -116,7 +124,7 @@ class Iteration {
   std::mutex mu_;
   int const iteration_;
   CacheReadTestOptions const options_;
-  std::vector<gcs::ObjectMetadata> remaining_objects_;
+  std::vector<ObjectToRead> remaining_objects_;
 };
 
 gcs::Client MakeClient(CacheReadTestOptions const& options) {
@@ -147,14 +155,22 @@ int main(int argc, char* argv[]) {
   if (options->exit_after_parse) return 0;
 
   auto client = MakeClient(*options);
-  std::vector<gcs::ObjectMetadata> dataset;
+  std::vector<ObjectToRead> dataset;
   std::uint64_t dataset_size = 0;
-  for (auto& o : client.ListObjects(options->bucket_name,
+  /*for (auto& o : client.ListObjects(options->bucket_name,
                                     gcs::Prefix(options->object_prefix))) {
     if (!o) break;
     dataset_size += o->size();
     dataset.push_back(*std::move(o));
+  }*/
+  for (int i = options->object_start_index; i <= options->object_end_index; i++) {
+    dataset.emplace_back();
+    dataset.back().bucket = options->bucket_name;
+    dataset.back().name = options->object_prefix + google::cloud::storage_benchmarks::GetFileNameFromIndex(
+      i, {});
+    dataset.back().size = options->common_options.object_size;
   }
+
   if (dataset.empty()) {
     std::cerr << "No objects found in bucket " << options->bucket_name
               << " starting with prefix " << options->object_prefix << "\n"
@@ -181,7 +197,7 @@ int main(int argc, char* argv[]) {
             << "\n# Client Per Thread: " << std::boolalpha
             << options->client_per_thread
             << "\n# Object Count: " << dataset.size()
-            << "\n# Dataset size: " << FormatSize(dataset_size);
+            << "\n# Dataset size: NOT APPLICABLE"; // << FormatSize(dataset_size);
   gcs_bm::PrintOptions(std::cout, "Client Options", options->client_options);
   std::cout << "\n# Build Info: " << notes << std::endl;
 
@@ -203,7 +219,7 @@ int main(int argc, char* argv[]) {
   // as we can unnest some loops. Note that we do not copy each object
   // consecutively, we want to control the "hotness" of the dataset by
   // going through the objects in a round-robin fashion.
-  std::vector<gcs::ObjectMetadata> objects;
+  std::vector<ObjectToRead> objects;
   objects.reserve(dataset.size() * options->repeats_per_iteration);
   for (int i = 0; i != options->repeats_per_iteration; ++i) {
     objects.insert(objects.end(), dataset.begin(), dataset.end());
@@ -259,7 +275,7 @@ namespace {
 DownloadDetail DownloadOneObject(
     gcs::Client& client, std::mt19937_64& generator,
     CacheReadTestOptions const& options,
-    gcs::ObjectMetadata const& object, int iteration) {
+    ObjectToRead const& object, int iteration) {
   using clock = std::chrono::steady_clock;
   using std::chrono::duration_cast;
   using std::chrono::microseconds;
@@ -269,15 +285,14 @@ DownloadDetail DownloadOneObject(
   auto const object_start = clock::now();
   auto const start = std::chrono::system_clock::now();
   auto object_bytes = std::uint64_t{0};
-  auto const object_size = static_cast<std::int64_t>(object.size());
+  auto const object_size = object.size;
   auto range = gcs::ReadRange();
   if (options.read_size != 0 && options.read_size < object_size) {
     auto read_start = std::uniform_int_distribution<std::int64_t>(
         0, object_size - options.read_size);
     range = gcs::ReadRange(read_start(generator), options.read_size);
   }
-  auto stream = client.ReadObject(object.bucket(), object.name(),
-                                  gcs::Generation(object.generation()), range);
+  auto stream = client.ReadObject(object.bucket, object.name, range);
   while (stream.read(buffer.data(), buffer_size)) {
     object_bytes += stream.gcount();
   }

@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_READ_TEST_OPTIONS_H
-#define GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_READ_TEST_OPTIONS_H
+#ifndef GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_TEST_OPTIONS_H
+#define GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_TEST_OPTIONS_H
 
 #include "google/cloud/storage/benchmarks/benchmark_utils.h"
-#include "google/cloud/storage/benchmarks/cache_test_options.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,30 +24,26 @@ namespace google {
 namespace cloud {
 namespace storage_benchmarks {
 
-struct CacheReadTestOptions {
-  std::string labels;
+// Shared settings between workload generation and read tests
+struct CommonCacheTestOptions {
   std::string bucket_name;
   std::string object_prefix;
   int object_start_index = 1;
   int object_end_index = 1000;
-  int thread_count = 1;
-  int iteration_count = 1;
-  int repeats_per_iteration = 1;
-  std::int64_t read_size = 0;  // 0 means "read the whole file"
-  std::size_t read_buffer_size = 4 * kMiB;
-  std::string api;
-  bool client_per_thread = false;
-  Options client_options;
-  bool exit_after_parse = false;
-  CommonCacheTestOptions common_options;
+  std::int64_t object_size = 64 * kMiB;
+  // Shorter names will be padded with zeros
+  int object_name_min_length = 10;
+  int object_count() const { return object_end_index - object_start_index; }
 };
 
-google::cloud::StatusOr<CacheReadTestOptions>
-ParseCacheReadTestOptions(std::vector<std::string> const& argv,
-                                        std::string const& description);
+std::string GetFileNameFromIndex(int index,
+                                 CommonCacheTestOptions const& options);
+
+google::cloud::StatusOr<CommonCacheTestOptions> ParseCommonCacheTestOptions(
+    std::vector<std::string> const& argv, std::string const& description);
 
 }  // namespace storage_benchmarks
 }  // namespace cloud
 }  // namespace google
 
-#endif  // GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_READ_TEST_OPTIONS_H
+#endif  // GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CACHE_TEST_OPTIONS_H

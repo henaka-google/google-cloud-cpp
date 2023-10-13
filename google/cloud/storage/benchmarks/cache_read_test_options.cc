@@ -85,6 +85,14 @@ ParseCacheReadTestOptions(std::vector<std::string> const& argv,
        [&options](std::string const& val) { options.bucket_name = val; }},
       {"--object-prefix", "the dataset prefix",
        [&options](std::string const& val) { options.object_prefix = val; }},
+      {"--object_start_index", "starting index for objects to read",
+       [&options](std::string const& val) {
+         options.object_start_index = std::stoi(val);
+       }},
+      {"--object_end_index", "number of objects to read",
+       [&options](std::string const& val) {
+         options.object_end_index = std::stoi(val);
+       }},
       {"--thread-count", "set the number of threads in the benchmark",
        [&options](std::string const& val) {
          options.thread_count = std::stoi(val);
@@ -159,6 +167,13 @@ ParseCacheReadTestOptions(std::vector<std::string> const& argv,
              std::stoi(val));
        }},
   };
+  auto common_options = ParseCommonCacheTestOptions(argv, description);
+  if (!common_options) {
+    std::cerr << common_options.status() << "\n";
+    return common_options.status();
+  }
+  options.common_options = common_options.value();
+
   auto usage = BuildUsage(desc, argv[0]);
 
   auto unparsed = OptionsParse(desc, argv);
@@ -178,7 +193,7 @@ ParseCacheReadTestOptions(std::vector<std::string> const& argv,
        << absl::StrJoin(std::next(unparsed.begin()), unparsed.end(), ", ")
        << "\n"
        << usage << "\n";
-    return Status{StatusCode::kInvalidArgument, std::move(os).str()};
+    //return Status{StatusCode::kInvalidArgument, std::move(os).str()};
   }
   return ValidateOptions(usage, std::move(options));
 }

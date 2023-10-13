@@ -16,6 +16,7 @@
 #define GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_STORAGE_BENCHMARKS_CREATE_DATASET_OPTIONS_H
 
 #include "google/cloud/storage/benchmarks/benchmark_utils.h"
+#include "google/cloud/storage/benchmarks/cache_test_options.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -26,9 +27,6 @@ namespace storage_benchmarks {
 
 struct CacheCreateDatasetOptions {
   std::string labels;
-  std::string bucket_name;
-  std::string object_prefix;
-  int object_count = 1000;
   std::int64_t minimum_object_size = 64 * kMiB;
   std::int64_t maximum_object_size = 64 * kMiB;
   std::int64_t resumable_upload_chunk_size = 64 * kMiB;
@@ -38,6 +36,7 @@ struct CacheCreateDatasetOptions {
   bool client_per_thread = false;
   Options client_options;
   bool exit_after_parse = false;
+  CommonCacheTestOptions common_options;
 };
 
 google::cloud::StatusOr<CacheCreateDatasetOptions>

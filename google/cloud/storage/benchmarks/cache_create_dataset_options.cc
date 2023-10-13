@@ -34,14 +34,9 @@ StatusOr<CacheCreateDatasetOptions> ValidateOptions(
     return google::cloud::Status{code, std::move(os).str()};
   };
 
-  if (options.bucket_name.empty()) {
+  if (options.common_options.object_count() <= 0) {
     std::ostringstream os;
-    os << "Missing --bucket option\n" << usage << "\n";
-    return make_status(os);
-  }
-  if (options.object_count <= 0) {
-    std::ostringstream os;
-    os << "Invalid number of objects (" << options.object_count
+    os << "Invalid number of objects (" << options.common_options.object_count()
        << "), check your --object-count option\n";
     return make_status(os);
   }
@@ -90,14 +85,6 @@ ParseCacheCreateDatasetOptions(std::vector<std::string> const& argv,
        [&wants_description](std::string const&) { wants_description = true; }},
       {"--labels", "user-defined labels to tag the results",
        [&options](std::string const& val) { options.labels = val; }},
-      {"--bucket-name", "the bucket where the dataset is located",
-       [&options](std::string const& val) { options.bucket_name = val; }},
-      {"--object-prefix", "the dataset prefix",
-       [&options](std::string const& val) { options.object_prefix = val; }},
-      {"--object-count", "number of objects created in each iteration",
-       [&options](std::string const& val) {
-         options.object_count = std::stoi(val);
-       }},
       {"--minimum-object-size", "minimum object size for uploads",
        [&options](std::string const& val) {
          options.minimum_object_size = ParseSize(val);
@@ -172,6 +159,13 @@ ParseCacheCreateDatasetOptions(std::vector<std::string> const& argv,
              std::stoi(val));
        }},
   };
+  auto common_options = ParseCommonCacheTestOptions(argv, description);
+  if (!common_options) {
+    std::cerr << common_options.status() << "\n";
+    return common_options.status();
+  }
+  options.common_options = common_options.value();
+
   auto usage = BuildUsage(desc, argv[0]);
 
   auto unparsed = OptionsParse(desc, argv);
@@ -193,7 +187,7 @@ ParseCacheCreateDatasetOptions(std::vector<std::string> const& argv,
        << absl::StrJoin(std::next(unparsed.begin()), unparsed.end(), ", ")
        << "\n"
        << usage << "\n";
-    return Status{StatusCode::kInvalidArgument, std::move(os).str()};
+    //return Status{StatusCode::kInvalidArgument, std::move(os).str()};
   }
 
   return ValidateOptions(usage, std::move(options));

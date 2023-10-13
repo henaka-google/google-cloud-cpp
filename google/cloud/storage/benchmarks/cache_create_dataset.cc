@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/storage/benchmarks/cache_create_dataset_options.h"
+#include "google/cloud/storage/benchmarks/cache_test_options.h"
 #include "google/cloud/storage/benchmarks/benchmark_utils.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/grpc_plugin.h"
@@ -26,9 +27,6 @@
 #include "google/cloud/testing_util/timer.h"
 #include "absl/strings/str_format.h"
 #include "absl/time/time.h"
-
-#include <sstream>
-#include <iomanip>
 
 namespace {
 using ::google::cloud::testing_util::FormatSize;
@@ -148,9 +146,9 @@ int main(int argc, char* argv[]) {
 
   std::cout << "# Start time: " << gcs_bm::CurrentTime()
             << "\n# Labels: " << options->labels
-            << "\n# Bucket Name: " << options->bucket_name
-            << "\n# Object Prefix: " << options->object_prefix
-            << "\n# Object Count: " << options->object_count
+            << "\n# Bucket Name: " << options->common_options.bucket_name
+            << "\n# Object Prefix: " << options->common_options.object_prefix
+            << "\n# Object Count: " << options->common_options.object_count()
             << "\n# Minimum Object Size: "
             << FormatSize(options->minimum_object_size)
             << "\n# Maximum Object Size: "
@@ -174,13 +172,13 @@ int main(int argc, char* argv[]) {
     return config;
   }(*options, client);
 
-  std::vector<UploadItem> upload_items(options->object_count);
+  std::vector<UploadItem> upload_items(options->common_options.object_count());
   std::mt19937_64 generator(std::random_device{}());
   std::generate(upload_items.begin(), upload_items.end(), [&] {
     auto const object_size = std::uniform_int_distribution<std::uint64_t>(
         options->minimum_object_size, options->maximum_object_size)(generator);
     return UploadItem{
-        options->object_prefix,// + gcs_bm::MakeRandomObjectName(generator),
+        options->common_options.object_prefix,// + gcs_bm::MakeRandomObjectName(generator),
         object_size};
   });
   auto const write_block = [&] {
@@ -253,7 +251,7 @@ int main(int argc, char* argv[]) {
         std::cout << FormatTimestamp(d.start_time)                //
                   << ',' << labels                                //
                   << ',' << d.iteration                           //
-                  << ',' << options->object_count                 //
+                  << ',' << options->common_options.object_count()                 //
                   << ',' << options->resumable_upload_chunk_size  //
                   << ',' << options->thread_count                 //
                   << ',' << options->api                          //
@@ -307,11 +305,9 @@ std::string ExtractUploadId(std::string v) {
   return v.substr(pos + std::strlen(kRestField));
 }
 
-std::string NextName() {
+std::string NextName(CacheCreateDatasetOptions const& options) {
   static int i;
-  std::stringstream ss;
-  ss << std::setw(10) << std::setfill('0') << i++;
-  return ss.str();
+  return GetFileNameFromIndex(i++, options.common_options);
 }
 
 UploadDetail UploadOneObject(gcs::Client& client,
@@ -327,7 +323,7 @@ UploadDetail UploadOneObject(gcs::Client& client,
   auto const start = std::chrono::system_clock::now();
 
   // Ensure that every upload creates a new object
-  auto stream = client.WriteObject(options.bucket_name, upload.object_name + "/" + NextName());
+  auto stream = client.WriteObject(options.common_options.bucket_name, upload.object_name + "/" + NextName(options));
   auto object_bytes = std::uint64_t{0};
   while (object_bytes < upload.object_size) {
     auto n = std::min(static_cast<std::uint64_t>(buffer_size),
@@ -346,7 +342,7 @@ UploadDetail UploadOneObject(gcs::Client& client,
   auto upload_id = ExtractUploadId(stream.resumable_session_id());
   return UploadDetail{iteration,
                       start,
-                      options.bucket_name,
+                      options.common_options.bucket_name,
                       upload.object_name,
                       std::move(upload_id),
                       std::move(peer),
