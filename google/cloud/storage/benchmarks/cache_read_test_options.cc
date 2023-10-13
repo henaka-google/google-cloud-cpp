@@ -32,11 +32,6 @@ StatusOr<CacheReadTestOptions> ValidateOptions(
     return Status{StatusCode::kInvalidArgument, std::move(os).str()};
   };
 
-  if (options.bucket_name.empty()) {
-    std::ostringstream os;
-    os << "Missing --bucket-name option\n" << usage << "\n";
-    return make_status(os);
-  }
   if (options.thread_count <= 0) {
     std::ostringstream os;
     os << "Invalid number of threads (" << options.thread_count
@@ -81,18 +76,6 @@ ParseCacheReadTestOptions(std::vector<std::string> const& argv,
        [&wants_description](std::string const&) { wants_description = true; }},
       {"--labels", "user-defined labels to tag the results",
        [&options](std::string const& val) { options.labels = val; }},
-      {"--bucket-name", "the bucket where the dataset is located",
-       [&options](std::string const& val) { options.bucket_name = val; }},
-      {"--object-prefix", "the dataset prefix",
-       [&options](std::string const& val) { options.object_prefix = val; }},
-      {"--object_start_index", "starting index for objects to read",
-       [&options](std::string const& val) {
-         options.object_start_index = std::stoi(val);
-       }},
-      {"--object_end_index", "number of objects to read",
-       [&options](std::string const& val) {
-         options.object_end_index = std::stoi(val);
-       }},
       {"--thread-count", "set the number of threads in the benchmark",
        [&options](std::string const& val) {
          options.thread_count = std::stoi(val);

@@ -85,6 +85,7 @@ struct UploadDetail {
   std::uint64_t bytes_uploaded;
   std::chrono::microseconds elapsed_time;
   google::cloud::Status status;
+  std::string message;
 };
 
 struct TaskResult {
@@ -203,17 +204,7 @@ int main(int argc, char* argv[]) {
   };
 
   Counters accumulated;
-  // Print the header, so it can be easily loaded using the tools available in
-  // our analysis tools (typically Python pandas, but could be R). Flush the
-  // header because sometimes we interrupt the benchmark and these tools
-  // require a header even for empty files.
-  std::cout
-      << "Start,Labels,Iteration,ObjectCount,ResumableUploadChunkSize"
-      << ",ThreadCount,Api,ClientPerThread"
-      << ",BucketName,ObjectName,UploadId,Peer,StatusCode"
-      << ",BytesUploaded,ElapsedMicroseconds"
-      << ",IterationBytes,IterationElapsedMicroseconds,IterationCpuMicroseconds"
-      << std::endl;
+  std::cout << "\n\nBeginning uploads...\n\n";
 
   for (int i = 0; i != options->iteration_count; ++i) {
     auto timer = Timer::PerProcess();
@@ -240,8 +231,6 @@ int main(int argc, char* argv[]) {
       return v;
     };
     auto const labels = clean_csv_field(options->labels);
-    auto const* client_per_thread =
-        options->client_per_thread ? "true" : "false";
     // Print the results after each iteration. Makes it possible to interrupt
     // the benchmark in the middle and still get some data.
     for (auto const& r : iteration_results) {
@@ -249,23 +238,9 @@ int main(int argc, char* argv[]) {
         // Join the iteration details with the per-upload details. That makes
         // it easier to analyze the data in external scripts.
         std::cout << FormatTimestamp(d.start_time)                //
-                  << ',' << labels                                //
-                  << ',' << d.iteration                           //
-                  << ',' << options->common_options.object_count()                 //
-                  << ',' << options->resumable_upload_chunk_size  //
-                  << ',' << options->thread_count                 //
                   << ',' << options->api                          //
-                  << ',' << client_per_thread                     //
-                  << ',' << d.bucket_name                         //
-                  << ',' << d.object_name                         //
-                  << ',' << d.upload_id                           //
-                  << ',' << d.peer                                //
-                  << ',' << d.status.code()                       //
-                  << ',' << d.bytes_uploaded                      //
-                  << ',' << d.elapsed_time.count()                //
-                  << ',' << uploaded_bytes                        //
-                  << ',' << usage.elapsed_time.count()            //
-                  << ',' << usage.cpu_time.count()                //
+                  << ',' << d.bucket_name << d.object_name          //
+                  << ',' << d.message                //
                   << "\n";
       }
       // Update the counters.
@@ -306,7 +281,7 @@ std::string ExtractUploadId(std::string v) {
 }
 
 std::string NextName(CacheCreateDatasetOptions const& options) {
-  static int i;
+  static int i = 1;
   return GetFileNameFromIndex(i++, options.common_options);
 }
 
@@ -323,7 +298,8 @@ UploadDetail UploadOneObject(gcs::Client& client,
   auto const start = std::chrono::system_clock::now();
 
   // Ensure that every upload creates a new object
-  auto stream = client.WriteObject(options.common_options.bucket_name, upload.object_name + "/" + NextName(options));
+  std::string next_object_name = upload.object_name + "/" + NextName(options);
+  auto stream = client.WriteObject(options.common_options.bucket_name, next_object_name);
   auto object_bytes = std::uint64_t{0};
   while (object_bytes < upload.object_size) {
     auto n = std::min(static_cast<std::uint64_t>(buffer_size),
@@ -343,12 +319,13 @@ UploadDetail UploadOneObject(gcs::Client& client,
   return UploadDetail{iteration,
                       start,
                       options.common_options.bucket_name,
-                      upload.object_name,
+                      next_object_name,
                       std::move(upload_id),
                       std::move(peer),
                       object_bytes,
                       object_elapsed,
-                      stream.metadata().status()};
+                      stream.metadata().status(),
+                      stream.metadata().status().ok() ? "OK" : stream.metadata().status().message()};
 }
 
 TaskResult UploadIteration::UploadTask(TaskConfig const& config,

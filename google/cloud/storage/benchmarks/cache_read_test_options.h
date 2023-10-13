@@ -27,16 +27,12 @@ namespace storage_benchmarks {
 
 struct CacheReadTestOptions {
   std::string labels;
-  std::string bucket_name;
-  std::string object_prefix;
-  int object_start_index = 1;
-  int object_end_index = 1000;
   int thread_count = 1;
   int iteration_count = 1;
   int repeats_per_iteration = 1;
   std::int64_t read_size = 0;  // 0 means "read the whole file"
   std::size_t read_buffer_size = 4 * kMiB;
-  std::string api;
+  std::string api = "JSON";
   bool client_per_thread = false;
   Options client_options;
   bool exit_after_parse = false;

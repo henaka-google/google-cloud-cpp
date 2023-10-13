@@ -33,7 +33,7 @@ struct CommonCacheTestOptions {
   std::int64_t object_size = 64 * kMiB;
   // Shorter names will be padded with zeros
   int object_name_min_length = 10;
-  int object_count() const { return object_end_index - object_start_index; }
+  int object_count() const { return object_end_index - object_start_index + 1; }
 };
 
 std::string GetFileNameFromIndex(int index,

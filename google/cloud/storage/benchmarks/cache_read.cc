@@ -93,9 +93,11 @@ struct DownloadDetail {
   int iteration;
   std::chrono::system_clock::time_point start_time;
   std::string peer;
+  std::string object_name;
   std::uint64_t bytes_downloaded;
   std::chrono::microseconds elapsed_time;
   google::cloud::Status status;
+  std::string message;
 };
 
 struct TaskResult {
@@ -157,23 +159,23 @@ int main(int argc, char* argv[]) {
   auto client = MakeClient(*options);
   std::vector<ObjectToRead> dataset;
   std::uint64_t dataset_size = 0;
-  /*for (auto& o : client.ListObjects(options->bucket_name,
-                                    gcs::Prefix(options->object_prefix))) {
+  /*for (auto& o : client.ListObjects(options->common_options.bucket_name,
+                                    gcs::Prefix(options->common_options.object_prefix))) {
     if (!o) break;
     dataset_size += o->size();
     dataset.push_back(*std::move(o));
   }*/
-  for (int i = options->object_start_index; i <= options->object_end_index; i++) {
+  for (int i = options->common_options.object_start_index; i <= options->common_options.object_end_index; i++) {
     dataset.emplace_back();
-    dataset.back().bucket = options->bucket_name;
-    dataset.back().name = options->object_prefix + google::cloud::storage_benchmarks::GetFileNameFromIndex(
+    dataset.back().bucket = options->common_options.bucket_name;
+    dataset.back().name = options->common_options.object_prefix + google::cloud::storage_benchmarks::GetFileNameFromIndex(
       i, {});
     dataset.back().size = options->common_options.object_size;
   }
 
   if (dataset.empty()) {
-    std::cerr << "No objects found in bucket " << options->bucket_name
-              << " starting with prefix " << options->object_prefix << "\n"
+    std::cerr << "No objects found in bucket " << options->common_options.bucket_name
+              << " starting with prefix " << options->common_options.object_prefix << "\n"
               << "Cannot run the benchmark with an empty dataset\n";
     return 1;
   }
@@ -186,8 +188,8 @@ int main(int argc, char* argv[]) {
 
   std::cout << "# Start time: " << gcs_bm::CurrentTime()
             << "\n# Labels: " << options->labels
-            << "\n# Bucket Name: " << options->bucket_name
-            << "\n# Object Prefix: " << options->object_prefix
+            << "\n# Bucket Name: " << options->common_options.bucket_name
+            << "\n# Object Prefix: " << options->common_options.object_prefix
             << "\n# Thread Count: " << options->thread_count
             << "\n# Iterations: " << options->iteration_count
             << "\n# Repeats Per Iteration: " << options->repeats_per_iteration
@@ -226,16 +228,7 @@ int main(int argc, char* argv[]) {
   }
 
   Counters accumulated;
-  // Print the header, so it can be easily loaded using the tools available in
-  // our analysis tools (typically Python pandas, but could be R). Flush the
-  // header because sometimes we interrupt the benchmark and these tools
-  // require a header even for empty files.
-  std::cout << "Start,Labels,Iteration,ObjectCount,DatasetSize,ThreadCount"
-            << ",RepeatsPerIteration,ReadSize,ReadBufferSize,Api"
-            << ",ClientPerThread"
-            << ",StatusCode,Peer,BytesDownloaded,ElapsedMicroseconds"
-            << ",IterationBytes,IterationElapsedMicroseconds"
-            << ",IterationCpuMicroseconds" << std::endl;
+  std::cout << "\n\nBeginning read workload...\n\n";
 
   for (int i = 0; i != options->iteration_count; ++i) {
     auto timer = Timer::PerProcess();
@@ -307,8 +300,15 @@ DownloadDetail DownloadOneObject(
   }
   auto const& peer =
       p == stream.headers().end() ? std::string{"unknown"} : p->second;
-  return DownloadDetail{iteration,    start,          peer,
+  auto d = DownloadDetail{iteration,    start,          peer,
+  object.bucket + object.name,
                         object_bytes, object_elapsed, stream.status()};
+  if (stream.status().ok()) {
+    d.message = "OK";
+  } else {
+    d.message = stream.status().message() + ": " + object.bucket + "/" + object.name;
+  }
+  return d;
 }
 
 TaskResult Iteration::DownloadTask(TaskConfig const& config) {
@@ -398,7 +398,6 @@ void PrintResults(CacheReadTestOptions const& options,
   auto const labels = clean_csv_field(options.labels);
   auto const grpc_plugin_config =
       clean_csv_field(options.client_options.get<gcs_ex::GrpcPluginOption>());
-  auto const* client_per_thread = options.client_per_thread ? "true" : "false";
   // Print the results after each iteration. Makes it possible to interrupt
   // the benchmark in the middle and still get some data.
   for (auto const& r : iteration_results) {
@@ -406,23 +405,10 @@ void PrintResults(CacheReadTestOptions const& options,
       // Join the iteration details with the per-download details. That makes
       // it easier to analyze the data in external scripts.
       std::cout << FormatTimestamp(d.start_time)         //
-                << ',' << labels                         //
-                << ',' << d.iteration                    //
-                << ',' << object_count                   //
-                << ',' << dataset_size                   //
-                << ',' << options.thread_count           //
-                << ',' << options.repeats_per_iteration  //
-                << ',' << options.read_size              //
-                << ',' << options.read_buffer_size       //
                 << ',' << options.api                    //
-                << ',' << client_per_thread              //
+                << "," << d.object_name
                 << ',' << d.status.code()                //
-                << ',' << d.peer                         //
-                << ',' << d.bytes_downloaded             //
-                << ',' << d.elapsed_time.count()         //
-                << ',' << downloaded_bytes               //
-                << ',' << usage.elapsed_time.count()     //
-                << ',' << usage.cpu_time.count()         //
+                << "," << d.message 
                 << "\n";
     }
   }
@@ -430,7 +416,7 @@ void PrintResults(CacheReadTestOptions const& options,
   // the operator of these benchmarks (coryan@) is an impatient person.
   auto const bandwidth =
       FormatBandwidthGbPerSecond(downloaded_bytes, usage.elapsed_time);
-  std::cout << "# " << gcs_bm::CurrentTime()
+  std::cout << "\n# " << gcs_bm::CurrentTime()
             << " downloaded=" << downloaded_bytes
             << " cpu_time=" << absl::FromChrono(usage.cpu_time)
             << " elapsed_time=" << absl::FromChrono(usage.elapsed_time)
