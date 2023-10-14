@@ -30,6 +30,7 @@ struct CacheReadTestOptions {
   int thread_count = 1;
   int iteration_count = 1;
   int repeats_per_iteration = 1;
+  bool random_read_order = true;
   std::int64_t read_size = 0;  // 0 means "read the whole file"
   std::size_t read_buffer_size = 4 * kMiB;
   std::string api = "JSON";

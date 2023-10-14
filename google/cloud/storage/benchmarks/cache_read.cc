@@ -217,6 +217,8 @@ int main(int argc, char* argv[]) {
     return config;
   }(*options, client);
 
+  std::cout << "\n\nGenerating object read order...\n";
+
   // Create N copies of the object list, this simplifies the rest of the code
   // as we can unnest some loops. Note that we do not copy each object
   // consecutively, we want to control the "hotness" of the dataset by
@@ -226,9 +228,15 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i != options->repeats_per_iteration; ++i) {
     objects.insert(objects.end(), dataset.begin(), dataset.end());
   }
+  if (options->random_read_order) {
+    // obtain a time-based seed:
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine e(seed);
+    std::shuffle(std::begin(objects), std::end(objects), e);
+  }
 
   Counters accumulated;
-  std::cout << "\n\nBeginning read workload...\n\n";
+  std::cout << "\nBeginning read workload...\n\n";
 
   for (int i = 0; i != options->iteration_count; ++i) {
     auto timer = Timer::PerProcess();

@@ -105,6 +105,12 @@ ParseCacheReadTestOptions(std::vector<std::string> const& argv,
          options.client_per_thread =
              testing_util::ParseBoolean(val).value_or("true");
        }},
+       {"--random-read-order",
+       "read objects in random order instead of sequentially",
+       [&options](std::string const& val) {
+         options.random_read_order =
+             testing_util::ParseBoolean(val).value_or("true");
+       }},
       {"--grpc-channel-count", "controls the number of gRPC channels",
        [&options](std::string const& val) {
          options.client_options.set<GrpcNumChannelsOption>(std::stoi(val));
