@@ -129,6 +129,12 @@ ParseCacheCreateDatasetOptions(std::vector<std::string> const& argv,
        [&options](std::string const& val) {
          options.client_options.set<EndpointOption>(val);
        }},
+      {"--target-api-version-path", "change the API version path for REST",
+       [&options](std::string const& val) {
+         options.client_options
+             .set<google::cloud::storage::internal::TargetApiVersionOption>(
+                 val);
+       }},
       {"--transfer-stall-timeout",
        "configure `storage::TransferStallTimeoutOption`: the maximum time"
        " allowed for data to 'stall' (make insufficient progress) on all"
@@ -159,13 +165,6 @@ ParseCacheCreateDatasetOptions(std::vector<std::string> const& argv,
              std::stoi(val));
        }},
   };
-  auto common_options = ParseCommonCacheTestOptions(argv, description);
-  if (!common_options) {
-    std::cerr << common_options.status() << "\n";
-    return common_options.status();
-  }
-  options.common_options = common_options.value();
-
   auto usage = BuildUsage(desc, argv[0]);
 
   auto unparsed = OptionsParse(desc, argv);
@@ -174,6 +173,13 @@ ParseCacheCreateDatasetOptions(std::vector<std::string> const& argv,
     options.exit_after_parse = true;
     return options;
   }
+  auto common_options = ParseCommonCacheTestOptions(argv, description);
+  if (!common_options) {
+    std::cerr << common_options.status() << "\n";
+    return common_options.status();
+  }
+  options.common_options = common_options.value();
+
 
   if (wants_description) {
     std::cout << description << "\n";

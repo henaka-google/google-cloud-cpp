@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
         // it easier to analyze the data in external scripts.
         std::cout << FormatTimestamp(d.start_time)                //
                   << ',' << options->api                          //
-                  << ',' << d.bucket_name << d.object_name          //
+                  << ',' << d.bucket_name << '/' << d.object_name          //
                   << ',' << d.message                //
                   << "\n";
       }
