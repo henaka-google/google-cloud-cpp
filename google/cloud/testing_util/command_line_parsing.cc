@@ -33,7 +33,9 @@ std::int64_t ParseSize(std::string const& val) {
     std::int64_t multiplier;
   } matches[] = {
       {"TiB", kTiB}, {"GiB", kGiB}, {"MiB", kMiB}, {"KiB", kKiB},
+      {"Ti", kTiB}, {"Gi", kGiB}, {"Mi", kMiB}, {"Ki", kKiB},
       {"TB", kTB},   {"GB", kGB},   {"MB", kMB},   {"KB", kKB},
+      {"T", kTB},   {"G", kGB},   {"M", kMB},   {"K", kKB},
   };
   auto const s = std::stol(val);
   for (auto const& m : matches) {
